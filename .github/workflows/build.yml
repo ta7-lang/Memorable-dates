@@ -1,0 +1,36 @@
+name: Build APK
+on:
+  push:
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Unpack project
+        run: |
+          if [ ! -f settings.gradle ]; then for z in *.zip; do [ -f "$z" ] && unzip -o -q "$z"; done; fi
+          P=$(dirname "$(find . -name settings.gradle | head -1)")
+          echo "PROJ=$P" >> $GITHUB_ENV
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+      - name: Build
+        run: gradle -p "$PROJ" assembleRelease --no-daemon --stacktrace
+      - run: cp "$PROJ/app/build/outputs/apk/release/app-release.apk" PamyatnyeDaty.apk
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PamyatnyeDaty
+          path: PamyatnyeDaty.apk
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.${{ github.run_number }}
+          name: Памятные даты 1.${{ github.run_number }}
+          files: PamyatnyeDaty.apk
+          make_latest: true
